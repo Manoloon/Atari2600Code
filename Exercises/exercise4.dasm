@@ -1,0 +1,21 @@
+	; clean memory programm
+	processor 6502 ;tell the processor we use
+	
+	seg code 	; start the code
+	org $F000	; define the code origin at $F000
+
+Start:
+	lda #100	; Load the A register with the literal decimal value 100
+	adc #5		; Add the decimal value 5 to the accumulator        
+	sbc #10		; Subtract the decimal value 10 from the accumulator
+			; Register A should now contain the decimal 95 (or $5F in hexadecimal)
+	jmp Start
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; fill the ROM size to exactly 4kb
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org $FFFC
+	.word Start	; reset vector at $FFFC (where the program starts)
+	.word Start 	; this is the interrupt vector at $FFFE (unused in the VCS , no use interrupts)

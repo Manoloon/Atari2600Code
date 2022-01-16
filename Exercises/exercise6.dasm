@@ -1,0 +1,32 @@
+	; clean memory programm
+	processor 6502 ;tell the processor we use
+	
+	seg code 	; start the code
+	org $F000	; define the code origin at $F000
+
+Start:
+	lda #1		; Load the A register with the decimal value 1
+	ldx #2		; Load the X register with the decimal value 2
+	ldy #3		; Load the Y register with the decimal value 3
+
+	inx		; Increment X
+	iny		; Increment Y
+
+	clc		; antes de añadir tengo que borrar el carry
+	adc #1		; Increment A -> ADC (carry)
+			
+	dex		; Decrement X
+	dey		; Decrement Y
+        
+	sec		; primero set carry
+	sbc #1		; Decrement A -> se usa SBC
+	jmp Start
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; fill the ROM size to exactly 4kb
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org $FFFC
+	.word Start	; reset vector at $FFFC (where the program starts)
+	.word Start 	; this is the interrupt vector at $FFFE (unused in the VCS , no use interrupts)

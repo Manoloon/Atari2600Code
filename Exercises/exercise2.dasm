@@ -1,0 +1,21 @@
+	; clean memory programm
+	processor 6502 ;tell the processor we use
+	
+	seg code 	; start the code
+	org $F000	; define the code origin at $F000
+
+Start:
+	lda $A		; Load the A register with the hexadecimal value $A
+	ldx #%11111111	; Load the X register with the binary value %11111111
+	sta $80		; Store the value in the A register into memory address $80
+	stx $81		; Store the value in the X register into memory address $81
+	jmp Start
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; fill the ROM size to exactly 4kb
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	org $FFFC
+	.word Start	; reset vector at $FFFC (where the program starts)
+	.word Start 	; this is the interrupt vector at $FFFE (unused in the VCS , no use interrupts)

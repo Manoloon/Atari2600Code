@@ -1,0 +1,83 @@
+
+	processor 6502
+	include "vcs.h"
+	include "macro.h"
+	
+	seg mode
+	org $F000
+	
+start:
+	CLEAN_START
+	
+nextFrame:
+	lda #2 		; equal to %00000010
+	sta VBLANK
+	sta VSYNC
+	
+	sta WSYNC
+	sta WSYNC
+	sta WSYNC
+	
+	lda #0
+	sta VSYNC		; turn off vsync
+	
+	ldx #37
+loopVBlank:
+	sta WSYNC
+	dex
+	bne loopVBlank
+	
+	lda #0
+	sta VBLANK
+					; finish VBLANK
+	
+					; Draw 192 visible scanlines (kernel)
+	ldx #192
+        ldy $0D
+loopSky:
+	sty COLUBK
+        sta WSYNC
+        txa
+        dex
+        sbc #1
+        cmp #96
+        bne loopSky
+	
+        ldx #96
+        ldy #11
+loopHorizon:
+	sty COLUBK
+        sta WSYNC
+        txa
+        dex
+        sbc #1
+        cmp #94
+        bne loopHorizon
+        
+        ldx #94
+        ldy #45
+        
+loopGround:
+	sty COLUBK
+        sta WSYNC
+        txa
+        dex
+        sbc #1
+        cmp #0
+        bne loopGround
+					; overscan
+	lda #2
+	sta VBLANK
+	
+	ldx 30
+loopOverscan:
+	sta WSYNC
+	dex
+	bne loopOverscan
+	
+	jmp nextFrame
+	
+					; complete rom size
+	org $FFFC
+	.word start
+	.word start

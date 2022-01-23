@@ -11,6 +11,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	seg.u Variables
         org $80
+P0PosX 	byte
+P0PosY	byte
+P1PosX	byte
+P1PosY	byte
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start our ROM code segment starting at $F000.
@@ -21,66 +25,76 @@
 reset:
 	CLEAN_START
         
-        ldx #$80
-        stx COLUBK
-        ldx #$a6
-        stx COLUPF
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	
+
+	lda #10
+	sta P0PosX
+	lda #60
+	sta P0PosY 
+
+        
+NextFrame:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start a new frame by configuring VBLANK and VSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
-NextFrame
-        lda #02
-	sta VBLANK
-	sta VSYNC
+    
+	lda #02
+		sta VBLANK
+		sta VSYNC
 		
 	REPEAT 3
 		sta WSYNC 		; 3 time WSYNC
 	REPEND
 	
 	lda #0
-	sta VSYNC
-    
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Let the TIA output the 37 lines recommended for the VBLANK
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;        
+		sta VSYNC
         
 	REPEAT 37	
 		sta WSYNC
 	REPEND
 	
-        lda #0
-	sta VBLANK
+    lda #0
+		sta VBLANK
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Start 192 lines visibles
+;; Start 192 lines visibles
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	 ldx #192
-gameLoop:
-      
-	txa
-        sec
-        sbc P0PosY
-        sbc P1PosY
-        cmp #P0Height
-        cmp #P1Height
-        bcc P0Bitmap
-        lda #0
+	
+VisibleLineLoop:
+
+	lda #$84
+		sta COLUBK
+	lda #$C2
+		sta COLUPF
+	lda #%00000001
+		sta CTRLPF
+	lda #$F0
+		sta PF0				; enable reflect for the green part.
+
+	lda #$FC 
+		sta PF1
+	lda #0
+		sta PF2
+
+	ldx #192
+.GameLineLoop:
+	sta WSYNC
+	dex
+	bne .GameLineLoop
+	
        	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda #2				
-	sta VBLANK
+		sta VBLANK
 	
-        REPEAT 30
-	sta WSYNC
+    REPEAT 30
+		sta WSYNC
 	REPEND
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

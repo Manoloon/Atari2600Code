@@ -2,7 +2,6 @@
 	processor 6502
         include "vcs.h"
         include "macro.h"
-        include "xmacro.h"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start an uninitialized segment at $80 for var declaration.
@@ -10,7 +9,7 @@
 ;; the end if we use the stack.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	seg.u Variables
-        org $80
+    org $80
 P0PosX 	byte
 P0PosY	byte
 P1PosX	byte

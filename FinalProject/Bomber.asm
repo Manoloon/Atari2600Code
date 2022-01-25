@@ -194,7 +194,18 @@ NoInput:
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-P0Sprite:
+P0Sprite:		; navecita
+	.byte %000000000; zero line pattern
+        .byte #%00000000;$AA
+        .byte #%00000000;$0E
+        .byte #%01001001;$A8
+        .byte #%01111111;$0A
+        .byte #%01011101;$0C
+        .byte #%01001001;$AC
+        .byte #%00100010;$08
+        .byte #%00000000;$0E
+
+P3Sprite:
 	.byte %00000000
         .byte #%00011100;$AA	   ###
         .byte #%00001000;$0E		#

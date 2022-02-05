@@ -1,4 +1,3 @@
-
 	processor 6502
         include "vcs.h"
         include "macro.h"
@@ -18,6 +17,8 @@ P0SprPtr	word
 P0ColPtr	word
 P1SprPtr	word
 P1ColPtr	word
+P0AnimOffset	byte
+Random          byte    ; random number generate
 
 P0_HEIGHT =	9
 P1_HEIGHT =	9
@@ -40,9 +41,9 @@ reset:
 	sta P0PosX
 	lda #10
 	sta P0PosY 
-        lda #0
+        lda #60
         sta P1PosX
-        lda #83
+        lda #0	
 	sta P1PosY
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -69,6 +70,9 @@ reset:
         lda #>P1Color
         	sta P1ColPtr+1
         
+        lda #%11010100
+        sta Random
+        
 NextFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Calculations and task init for Player0 X position
@@ -93,14 +97,14 @@ NextFrame:
 	sta VSYNC
 		
 	REPEAT 3
-		sta WSYNC 		; 3 time WSYNC
+	sta WSYNC 		; 3 time WSYNC
 	REPEND
 	
 	lda #0
 	sta VSYNC
         
-	REPEAT 35	
-		sta WSYNC
+	REPEAT 37	
+	sta WSYNC
 	REPEND
 	
     	lda #0
@@ -141,6 +145,7 @@ VisibleLineLoop:
         lda #0
 .DrawP0Sprite:
 	clc
+        adc P0AnimOffset
 	tay
         lda (P0SprPtr),y
         sta WSYNC
@@ -168,6 +173,7 @@ VisibleLineLoop:
 	bne .GameLineLoop
         
         lda #0
+        sta P0AnimOffset
         sta WSYNC
 	
        	
@@ -175,11 +181,11 @@ VisibleLineLoop:
 ;; Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda #2				
-		sta VBLANK
+	sta VBLANK
 	
-    REPEAT 30
-		sta WSYNC
-	REPEND
+        REPEAT 30
+	sta WSYNC
+        REPEND
 	lda #0
         sta VBLANK
         
@@ -191,30 +197,84 @@ CheckP0Up:
         bit SWCHA
         bne CheckP0Down
         inc P0PosY
+        lda #0
+        sta P0AnimOffset
         
 CheckP0Down:
 	lda #%00100000
         bit SWCHA
         bne CheckP0Left
         dec P0PosY
+        lda #0
+        sta P0AnimOffset
 
 CheckP0Left:
 	lda #%01000000
         bit SWCHA
         bne CheckP0Right
 	dec P0PosX
+        lda P0_HEIGHT
+        sta P0AnimOffset
         
 CheckP0Right:
 	lda #%10000000
         bit SWCHA
         bne NoInput
         inc P0PosX
+        lda P0_HEIGHT
+        sta P0AnimOffset
         
 NoInput:
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Calculate movement for enemy
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+UpdateEnemyPos:
+	lda P1PosY
+        clc
+        cmp #0
+        bmi .ResetEnemyPos
+        dec P1PosY
+        jmp EndUpdateEnemyPos
+
+.ResetEnemyPos:
+	jsr GetRandomEnemyPos
+EndUpdateEnemyPos:
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         jmp NextFrame
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine for Enemy position using LFSR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Generate LFSR
+;;; divide the random value by 4 to limit size to match river zone
+;;; add 30 to compensate the left green zone
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GetRandomEnemyPos subroutine
+        lda Random              ; start LFSR
+        asl 
+        eor Random
+        asl
+        eor Random
+        asl
+        asl
+        eor Random
+        asl
+        rol Random              ; End LFSR
+
+        lsr
+        lsr                     ; this two lsr are the divide by 4
+        sta P1PosX
+        lda #30                 ; no podra spawnear en PF Green
+        adc P1PosX
+        sta P1PosX              ; set the new value for X position of enemy
+        
+        lda #96
+        sta P1PosY              ; set Y position for enemy
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Subroutine for actor horizontal movement fine offset
@@ -236,51 +296,32 @@ SetActorPosX subroutine
 	sta HMP0,Y
 	sta RESP0,Y
 	rts
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;---Graphics Data from PlayerPal 2600---
 
-P0Sprite:		; Jet
-	.byte %000000000; zero line pattern
-        .byte #%00011100;$AA
-        .byte #%00001000;$0E
-        .byte #%01111111;$A8
-        .byte #%00111110;$0A
-        .byte #%00011100;$0C
-        .byte #%00001000;$AC
-        .byte #%00001000;$08
-        .byte #%00000000;$0E
-        
-P3Sprite:		; navecita
-	.byte %000000000; zero line pattern
-        .byte #%00000000;$AA
-        .byte #%00000000;$0E
-        .byte #%01001001;$A8
-        .byte #%01111111;$0A
-        .byte #%01011101;$0C
-        .byte #%01001001;$AC
-        .byte #%00100010;$08
-        .byte #%00000000;$0E
-        
-P0SpriteRight:
-        .byte #%00001100;$AA
-        .byte #%00001000;$0E
-        .byte #%00001111;$A8
-        .byte #%00001110;$0A
-        .byte #%00001100;$0C
-        .byte #%00001000;$AC
-        .byte #%00001000;$08
-        .byte #%00001000;$0E
-P0SpriteLeft:
-        .byte #%00011000;$AA
-        .byte #%00001000;$0E
-        .byte #%01111000;$A8
-        .byte #%00111000;$0A
-        .byte #%00011000;$0C
-        .byte #%00001000;$AC
-        .byte #%00001000;$08
-        .byte #%00001000;$0E
+P0Sprite
+	.byte #%00000000;$1C
+        .byte #%00000000;$1C
+        .byte #%00000000;$1C
+        .byte #%00010100;$1C
+        .byte #%01111111;$1C
+        .byte #%00111110;$1C
+        .byte #%00011100;$1C
+        .byte #%00001000;$1C
+        .byte #%00001000;$1C
+P0SpriteRight
+	.byte #%00000000;$1C
+        .byte #%00000000;$1C
+        .byte #%00000000;$1C
+        .byte #%00001100;$1C
+        .byte #%00111110;$1C
+        .byte #%00011110;$1C
+        .byte #%00011100;$1C
+        .byte #%00001000;$1C
+        .byte #%00001000;$1C
+;---End Graphics Data---
            
 P1Sprite:
         .byte %00000000
@@ -297,26 +338,47 @@ P1Sprite:
 ;; Lookup table for the player colors
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-P0Color:
-        .byte #$AA;
-        .byte #$0E;
-        .byte #$A8;
-        .byte #$0A;
-        .byte #$0C;
-        .byte #$AC;
-        .byte #$08;
-        .byte #$0E;
+;---Color Data from PlayerPal 2600---
+
+P0Color
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+P0ColorF2
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+P0ColorF3
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+        .byte #$1C;
+;---End Color Data---
 
 P1Color:
     	byte #$00
-    	byte #$60
-    	byte #$60
-    	byte #$60
-    	byte #$60
-    	byte #$62
-    	byte #$62
-    	byte #$64
+    	byte #$01
+    	byte #$10
+    	byte #$10
+    	byte #$10
     	byte #$12
+    	byte #$02
+    	byte #$14
+    	byte #$02
 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Complete ROM size

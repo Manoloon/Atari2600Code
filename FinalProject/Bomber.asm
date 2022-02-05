@@ -8,7 +8,7 @@
 ;; the end if we use the stack.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	seg.u Variables
-    org $80
+        org $80
 P0PosX 		byte
 P0PosY		byte
 P1PosX		byte
@@ -30,8 +30,7 @@ P1_HEIGHT =	9
 	org $f000
 
 reset:
-	CLEAN_START
-        
+	CLEAN_START        
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize variables

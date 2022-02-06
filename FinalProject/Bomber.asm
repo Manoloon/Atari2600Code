@@ -13,6 +13,11 @@ P0PosX 		byte
 P0PosY		byte
 P1PosX		byte
 P1PosY		byte
+Score           byte            ; score is in mem pos = 85 and timer = 86 ;-) store as BCD
+Timer           byte            ; importante es que timer esta pegado a score.. bit shift calcs.(like a bool) . store as BCD
+Temp            byte            ; auxiliar var to handle digits.
+OnesDigitOffset word            ; el offset para lookup table de la unidad
+TensDigitOffset word            ; el offset para lookup table de la decena
 P0SprPtr	word
 P0ColPtr	word
 P1SprPtr	word
@@ -22,6 +27,7 @@ Random          byte    ; random number generate
 
 P0_HEIGHT =	9
 P1_HEIGHT =	9
+DIGITS_HEIGHT = 5
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start our ROM code segment starting at $F000.
@@ -46,6 +52,9 @@ reset:
 	sta P1PosY
         lda #%11010100
         sta Random
+        lda #0
+        sta Score
+        sta Timer       ; restart to 0 score and timer.
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize pointers to the correct lookup table addresses
@@ -82,6 +91,8 @@ NextFrame:
         lda P1PosX
         ldy #1
         jsr SetActorPosX
+
+        jsr CalcDigitsOffset
         
         sta WSYNC
         sta HMOVE
@@ -111,11 +122,14 @@ NextFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda #0
         sta PF0
-        STA PF1
-        STA PF2
-        STA GRP0
-        STA GRP1
-        STA COLUPF
+        sta PF1
+        sta PF2
+        sta GRP0
+        sta GRP1
+        lda #$1C
+        sta COLUPF
+        lda #%00000000
+        sta CTRLPF              ; no reflect the Playfield
 	REPEAT 20	
 		sta WSYNC
 	REPEND       
@@ -331,10 +345,142 @@ GetRandomEnemyPos subroutine
         lda #96
         sta P1PosY              ; set Y position for enemy
         rts
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine for handle Scoreboard display
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; for the low nibble we need to multiply by 5 (height of the digit in the lookuptable)
+; N*5 = (N*2*2)+N -> left shift op.
+; for the high nibble -> since is base 16 we need to divide it. -> right shift
+; (N/16)*5 = (N/2/2)+(N/2/2/2/2) = example : 4/16*5 = 4/4 + 4/16 = 20/16 = 4*4/4*4 + 4/16 = (20/16 = 20/16)
+;  [0,0,0,0][0,0,0,0]
+;    Score     Timer
+CalcDigitsOffset subroutine
+        ldx #1                  ; X regs is the loop counter
+.PrepareScoreLoop               ; this will loop twice = X=1 and then X=0
+        lda Score,x             ; load A with Timer (x=1) or Score (x=0) -> this is why they are one after the other.
+        and #$0F                ; 0F = 00001111 -> 11011011 + 00001111 = 1011 ;-) So only the unit value.
+        sta Temp                ; save the value of A into Temp var.
+        asl                     ; N*2
+        asl                     ; N*4
+        adc Temp                ; calculate low nibble
+        sta OnesDigitOffset,X   ; set the oneDigitOffset
+
+        lda Score,x
+        and #$F0
+        sta Temp
+        lsr                     ; N/2
+        lsr                     ; N/4
+        sta Temp
+        lsr                     ; N/8
+        lsr                     ; N/16                      
+        adc Temp
+        sta TensDigitOffset,X   ; set TensDigitOffset
+
+        dex                     ; X--
+        bpl .PrepareScoreLoop   ; while X >=0 , loop .
+
+        rts
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;---Graphics Data from PlayerPal 2600---
+Digits:
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %00110011          ;  ##  ##
+    .byte %00010001          ;   #   #
+    .byte %01110111          ; ### ###
+
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+    .byte %00010001          ;   #   #
+
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+    .byte %00010001          ;   #   #
+    .byte %01110111          ; ### ###
+
+    .byte %00100010          ;  #   #
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+
+    .byte %01110111          ; ### ###
+    .byte %01010101          ; # # # #
+    .byte %01100110          ; ##  ##
+    .byte %01010101          ; # # # #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01000100          ; #   #
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+
+    .byte %01100110          ; ##  ##
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+    .byte %01010101          ; # # # #
+    .byte %01100110          ; ##  ##
+
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01110111          ; ### ###
+
+    .byte %01110111          ; ### ###
+    .byte %01000100          ; #   #
+    .byte %01100110          ; ##  ##
+    .byte %01000100          ; #   #
+    .byte %01000100          ; #   #
 
 P0Sprite
 	.byte #%00000000;$1C

@@ -36,7 +36,7 @@ reset:
 ;; Initialize variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	lda #0
+	lda #68
 	sta P0PosX
 	lda #10
 	sta P0PosY 
@@ -44,6 +44,8 @@ reset:
         sta P1PosX
         lda #0	
 	sta P1PosY
+        lda #%11010100
+        sta Random
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize pointers to the correct lookup table addresses
@@ -69,9 +71,6 @@ reset:
         lda #>P1Color
         	sta P1ColPtr+1
         
-        lda #%11010100
-        sta Random
-        
 NextFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Calculations and task init for Player0 X position
@@ -89,8 +88,7 @@ NextFrame:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start a new frame by configuring VBLANK and VSYNC
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
 	lda #02
 	sta VBLANK
 	sta VSYNC
@@ -108,22 +106,31 @@ NextFrame:
 	
     	lda #0
 	sta VBLANK
-        
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; 20 lines visibles --> Using For Scoreboard
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Start 96 lines visibles --> Using 2-line Kernel
+	lda #0
+        sta PF0
+        STA PF1
+        STA PF2
+        STA GRP0
+        STA GRP1
+        STA COLUPF
+	REPEAT 20	
+		sta WSYNC
+	REPEND       
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	
+;; Start 84 lines visibles --> Using 2-line Kernel : (192 -20) /2 = 84
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 VisibleLineLoop:
 
 	lda #$84
-	sta COLUBK
-	
+	sta COLUBK	
         lda #$C6
-	sta COLUPF
-	
+	sta COLUPF	
         lda #%00000001
 	sta CTRLPF
-	
+
         lda #$F0
 	sta PF0			; enable reflect for the green part.
 	
@@ -133,7 +140,7 @@ VisibleLineLoop:
         lda #0
 	sta PF2
 
-	ldx #96
+	ldx #84
 .GameLineLoop:
 .CheckP0Bounds:
 	txa
@@ -173,9 +180,8 @@ VisibleLineLoop:
         
         lda #0
         sta P0AnimOffset
-        sta WSYNC
-	
-       	
+
+        sta WSYNC	 	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Overscan
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -235,15 +241,65 @@ UpdateEnemyPos:
         bmi .ResetEnemyPos
         dec P1PosY
         jmp EndUpdateEnemyPos
-
 .ResetEnemyPos:
 	jsr GetRandomEnemyPos
+
 EndUpdateEnemyPos:
-        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Check colision for P0 and enemy
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+CheckP0P1Collision:
+        lda #%10000000
+        bit CXPPMM      ; check collision between P0 and P1
+        bne .CollisionP0P1
+        jmp CheckP0PFCollision
+.CollisionP0P1:
+        jsr GameOver
+
+CheckP0PFCollision:
+        lda #%10000000
+        bit CXP0FB      ; collision P0 
+        bne .CollisionP0PF
+        jmp EndCheckCollision
+.CollisionP0PF:
+        jsr GameOver
+
+EndCheckCollision:      ; fallback
+        sta CXCLR           ; clear collision flag
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         jmp NextFrame
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine for actor horizontal movement fine offset
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; A is the target x-coord pos in pixels of our actor
+;;; Y is the actor type : (0:Player0,1:player1,2:Missile0,3:Missile1,4:ball)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+SetActorPosX subroutine
+	sta WSYNC
+	sec
+.Div15Loop:
+	sbc #15
+	bcs .Div15Loop
+	eor #7
+	asl
+	asl
+	asl
+	asl
+	sta HMP0,Y
+	sta RESP0,Y
+	rts
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GameOver Subroutine
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GameOver subroutine
+        ; clear score
+        lda #$42
+        sta COLUBK
+        rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Subroutine for Enemy position using LFSR
@@ -274,27 +330,7 @@ GetRandomEnemyPos subroutine
         
         lda #96
         sta P1PosY              ; set Y position for enemy
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Subroutine for actor horizontal movement fine offset
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; A is the target x-coord pos in pixels of our actor
-;;; Y is the actor type : (0:Player0,1:player1,2:Missile0,3:Missile1,4:ball)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-SetActorPosX subroutine
-	sta WSYNC
-	sec
-.Div15Loop:
-	sbc #15
-	bcs .Div15Loop
-	eor #7
-	asl
-	asl
-	asl
-	asl
-	sta HMP0,Y
-	sta RESP0,Y
-	rts
+        rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

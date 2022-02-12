@@ -24,6 +24,8 @@ P1SprPtr	word
 P1ColPtr	word
 P0AnimOffset	byte
 Random          byte    ; random number generate
+ScoreSprite     byte
+TimerSprite     byte
 
 P0_HEIGHT =	9
 P1_HEIGHT =	9
@@ -52,8 +54,9 @@ reset:
 	sta P1PosY
         lda #%11010100
         sta Random
-        lda #0
+        lda #4
         sta Score
+        lda #9
         sta Timer       ; restart to 0 score and timer.
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,6 +85,23 @@ reset:
         
 NextFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Start a new frame by configuring VBLANK and VSYNC
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
+	lda #02
+	sta VBLANK
+	sta VSYNC
+		
+	REPEAT 3
+	sta WSYNC 		; 3 time WSYNC
+	REPEND
+	
+	lda #0
+	sta VSYNC
+        
+	REPEAT 33               ; sacamos 4 ciclos porque seran usados por el calculo de la posicion X del player 0.	
+	sta WSYNC
+	REPEND
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Calculations and task init for Player0 X position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda P0PosX
@@ -97,27 +117,9 @@ NextFrame:
         sta WSYNC
         sta HMOVE
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Start a new frame by configuring VBLANK and VSYNC
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
-	lda #02
-	sta VBLANK
-	sta VSYNC
-		
-	REPEAT 3
-	sta WSYNC 		; 3 time WSYNC
-	REPEND
-	
-	lda #0
-	sta VSYNC
-        
-	REPEAT 37	
-	sta WSYNC
-	REPEND
-	
     	lda #0
 	sta VBLANK
- ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 20 lines visibles --> Using For Scoreboard
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda #0
@@ -130,9 +132,52 @@ NextFrame:
         sta COLUPF
         lda #%00000000
         sta CTRLPF              ; no reflect the Playfield
-	REPEAT 20	
-		sta WSYNC
-	REPEND       
+        
+        ldx #DIGITS_HEIGHT
+.ScoreDigitLoop:
+        ldy TensDigitOffset
+        lda Digits,Y
+        and #$F0
+        sta ScoreSprite
+
+        ldy OnesDigitOffset
+        lda Digits,Y
+        and #$0F
+
+        ora ScoreSprite
+        sta ScoreSprite
+        sta WSYNC
+        sta PF1
+
+        ldy TensDigitOffset+1
+        lda Digits,Y
+        and #$F0
+        sta TimerSprite
+
+        ldy OnesDigitOffset+1
+        lda Digits,Y
+        and #$0F
+
+        ora TimerSprite
+        sta TimerSprite
+        
+        jsr Waste12Cycle
+
+        sta PF1
+        ldy ScoreSprite
+        sta WSYNC
+        sty PF1
+
+        inc TensDigitOffset
+        inc TensDigitOffset+1
+        inc OnesDigitOffset
+        inc OnesDigitOffset+1
+
+        jsr Waste12Cycle
+
+        dex 
+        sta PF1
+        bne .ScoreDigitLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start 84 lines visibles --> Using 2-line Kernel : (192 -20) /2 = 84
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
@@ -381,7 +426,11 @@ CalcDigitsOffset subroutine
         bpl .PrepareScoreLoop   ; while X >=0 , loop .
 
         rts
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; waste 12 cycles subroutine
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;       
+Waste12Cycle subroutine
+	rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

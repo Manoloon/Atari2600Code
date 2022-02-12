@@ -26,6 +26,8 @@ P0AnimOffset	byte
 Random          byte    ; random number generate
 ScoreSprite     byte
 TimerSprite     byte
+TerrainColor	byte
+RiverColor		byte
 
 P0_HEIGHT =	9
 P1_HEIGHT =	9
@@ -128,10 +130,11 @@ NextFrame:
         sta PF2
         sta GRP0
         sta GRP1
-        lda #$1C
-        sta COLUPF
-        lda #%00000000
         sta CTRLPF              ; no reflect the Playfield
+        sta COLUBK
+
+        lda #$1E
+        sta COLUPF
         
         ldx #DIGITS_HEIGHT
 .ScoreDigitLoop:
@@ -166,8 +169,8 @@ NextFrame:
         sta PF1
         ldy ScoreSprite
         sta WSYNC
-        sty PF1
 
+        sty PF1
         inc TensDigitOffset
         inc TensDigitOffset+1
         inc OnesDigitOffset
@@ -178,20 +181,31 @@ NextFrame:
         dex 
         sta PF1
         bne .ScoreDigitLoop
+
+        sta WSYNC
+
+	lda #0
+	sta PF0
+	sta PF1
+	sta PF2
+	sta WSYNC
+	sta WSYNC
+	sta WSYNC
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start 84 lines visibles --> Using 2-line Kernel : (192 -20) /2 = 84
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;	
 VisibleLineLoop:
 
-	lda #$84
+	lda RiverColor ;#$84
 	sta COLUBK	
-        lda #$C6
+        lda TerrainColor ;#$C6
 	sta COLUPF	
         lda #%00000001
 	sta CTRLPF
 
         lda #$F0
-	sta PF0			; enable reflect for the green part.
+	sta PF0			; enable reflect for the Terrain.
 	
         lda #$FC 
 	sta PF1
@@ -311,20 +325,27 @@ CheckP0P1Collision:
         lda #%10000000
         bit CXPPMM      ; check collision between P0 and P1
         bne .CollisionP0P1
-        jmp CheckP0PFCollision
+
+        lda #$C6
+	sta TerrainColor
+	lda #$84
+	sta RiverColor
+
+        jmp EndCheckCollision
 .CollisionP0P1:
         jsr GameOver
 
-CheckP0PFCollision:
-        lda #%10000000
-        bit CXP0FB      ; collision P0 
-        bne .CollisionP0PF
-        jmp EndCheckCollision
-.CollisionP0PF:
-        jsr GameOver
+;CheckP0PFCollision:
+ ;       lda #%10000000
+  ;      bit CXP0FB      ; collision P0 
+   ;     bne .CollisionP0PF
+    ;    jmp EndCheckCollision
+;.CollisionP0PF:
+ ;       jsr GameOver
 
 EndCheckCollision:      ; fallback
         sta CXCLR           ; clear collision flag
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; End of the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -356,8 +377,10 @@ SetActorPosX subroutine
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 GameOver subroutine
         ; clear score
-        lda #$42
-        sta COLUBK
+        lda #$4E
+        sta TerrainColor
+	lda #$41
+	sta RiverColor
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

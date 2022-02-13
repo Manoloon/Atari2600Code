@@ -273,6 +273,9 @@ CheckP0Up:
 	lda #%00010000
         bit SWCHA
         bne CheckP0Down
+        lda P0PosY
+        cmp #70			; Up Bound
+        bpl CheckP0Down
         inc P0PosY
         lda #0
         sta P0AnimOffset
@@ -281,6 +284,9 @@ CheckP0Down:
 	lda #%00100000
         bit SWCHA
         bne CheckP0Left
+        lda P0PosY
+        cmp #0			; bottom bound
+        bmi CheckP0Left
         dec P0PosY
         lda #0
         sta P0AnimOffset
@@ -289,6 +295,9 @@ CheckP0Left:
 	lda #%01000000
         bit SWCHA
         bne CheckP0Right
+	lda P0PosX
+        cmp #33			; left bound
+        bmi CheckP0Right
 	dec P0PosX
         lda P0_HEIGHT
         sta P0AnimOffset
@@ -297,10 +306,12 @@ CheckP0Right:
 	lda #%10000000
         bit SWCHA
         bne NoInput
+        lda P0PosX
+        cmp #100		; Right Bound
+        bpl NoInput
         inc P0PosX
         lda P0_HEIGHT
         sta P0AnimOffset
-        
 NoInput:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

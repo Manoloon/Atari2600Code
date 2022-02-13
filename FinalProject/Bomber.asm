@@ -58,8 +58,7 @@ reset:
         sta Random
         lda #0
         sta Score
-        lda #0
-        sta Timer       ; restart to 0 score and timer.
+        sta Timer               ; this gonna be the hiscore
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize pointers to the correct lookup table addresses
@@ -383,6 +382,7 @@ GameOver subroutine
 	sta RiverColor
         lda #0
         sta Score
+        ;;; TODO : check if score is > than hiscore -> hiscore = score and reset.
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

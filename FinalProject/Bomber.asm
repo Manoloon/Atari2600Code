@@ -56,9 +56,9 @@ reset:
 	sta P1PosY
         lda #%11010100
         sta Random
-        lda #4
+        lda #0
         sta Score
-        lda #9
+        lda #0
         sta Timer       ; restart to 0 score and timer.
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -381,6 +381,8 @@ GameOver subroutine
         sta TerrainColor
 	lda #$41
 	sta RiverColor
+        lda #0
+        sta Score
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -412,6 +414,7 @@ GetRandomEnemyPos subroutine
         
         lda #96
         sta P1PosY              ; set Y position for enemy
+        inc Score               ; increment score +1
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

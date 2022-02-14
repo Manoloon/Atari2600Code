@@ -124,13 +124,13 @@ NextFrame:
 ;; 20 lines visibles --> Using For Scoreboard
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	lda #0
+        sta COLUBK
         sta PF0
         sta PF1
         sta PF2
         sta GRP0
         sta GRP1
         sta CTRLPF              ; no reflect the Playfield
-        sta COLUBK
 
         lda #$1E
         sta COLUPF

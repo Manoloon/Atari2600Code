@@ -326,7 +326,13 @@ UpdateEnemyPos:
         jmp EndUpdateEnemyPos
 .ResetEnemyPos:
 	jsr GetRandomEnemyPos
-
+.UpdateScore:
+        sed
+        clc 
+        lda Score
+        adc #1
+        sta Score
+        cld 
 EndUpdateEnemyPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Check colision for P0 and enemy
@@ -425,7 +431,6 @@ GetRandomEnemyPos subroutine
         
         lda #96
         sta P1PosY              ; set Y position for enemy
-        inc Score               ; increment score +1
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

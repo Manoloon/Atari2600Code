@@ -13,6 +13,8 @@ P0PosX 		byte
 P0PosY		byte
 P1PosX		byte
 P1PosY		byte
+M0PosX		byte
+M0PosY		byte
 Score           byte            ; score is in mem pos = 85 and timer = 86 ;-) store as BCD
 Timer           byte            ; importante es que timer esta pegado a score.. bit shift calcs.(like a bool) . store as BCD
 Temp            byte            ; auxiliar var to handle digits.
@@ -40,8 +42,8 @@ DIGITS_HEIGHT = 5
 	org $f000
 
 reset:
-	CLEAN_START        
-
+	CLEAN_START    
+        
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -52,14 +54,26 @@ reset:
 	sta P0PosY 
         lda #60
         sta P1PosX
-        lda #0	
+        lda #83	
 	sta P1PosY
         lda #%11010100
         sta Random
         lda #0
         sta Score
         sta Timer               ; this gonna be the hiscore
-        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; MACRO : DRAW_MISSILE
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	MAC DRAW_MISSILE
+		lda #%00000000
+		cpx M0PosY
+        	bne .SkipDrawing
+.DrawMissile:
+	lda #%00000010
+        inc M0PosY
+.SkipDrawing:	
+	sta ENAM0
+	ENDM
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize pointers to the correct lookup table addresses
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -83,12 +97,12 @@ reset:
         	sta P1ColPtr
         lda #>P1Color
         	sta P1ColPtr+1
-        
+
 NextFrame:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start a new frame by configuring VBLANK and VSYNC
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
-	lda #02
+	lda #2
 	sta VBLANK
 	sta VSYNC
 		
@@ -112,7 +126,11 @@ NextFrame:
         lda P1PosX
         ldy #1
         jsr SetActorPosX
-
+	
+        lda M0PosX
+        ldy #2
+        jsr SetActorPosX
+        
         jsr CalcDigitsOffset
         
         sta WSYNC
@@ -131,6 +149,7 @@ NextFrame:
         sta GRP0
         sta GRP1
         sta CTRLPF              ; no reflect the Playfield
+        
 
         lda #$1E
         sta COLUPF
@@ -212,8 +231,9 @@ VisibleLineLoop:
         lda #0
 	sta PF2
 
-	ldx #84
+	ldx #85
 .GameLineLoop:
+	DRAW_MISSILE
 .CheckP0Bounds:
 	txa
         sec
@@ -273,6 +293,7 @@ CheckP0Up:
 	lda #%00010000
         bit SWCHA
         bne CheckP0Down
+.P0UpPressed:
         lda P0PosY
         cmp #70			; Up Bound
         bpl CheckP0Down
@@ -284,6 +305,7 @@ CheckP0Down:
 	lda #%00100000
         bit SWCHA
         bne CheckP0Left
+.P0DownPressed:
         lda P0PosY
         cmp #0			; bottom bound
         bmi CheckP0Left
@@ -295,6 +317,7 @@ CheckP0Left:
 	lda #%01000000
         bit SWCHA
         bne CheckP0Right
+.P0LeftPressed:
 	lda P0PosX
         cmp #33			; left bound
         bmi CheckP0Right
@@ -305,15 +328,30 @@ CheckP0Left:
 CheckP0Right:
 	lda #%10000000
         bit SWCHA
-        bne NoInput
+        bne CheckP0button
+.P0RightPressed:
         lda P0PosX
         cmp #100		; Right Bound
-        bpl NoInput
+        bpl CheckP0button
         inc P0PosX
         lda P0_HEIGHT
         sta P0AnimOffset
+        
+CheckP0button:
+	lda #%10000000
+        bit INPT4		
+        bne NoInput
+.P0ButtonPressed:
+        lda P0PosX
+        clc
+        adc #5
+        sta M0PosX
+        
+        lda P0PosY
+        clc
+        adc #5
+        sta M0PosY        
 NoInput:
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Calculate movement for enemy
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -326,13 +364,13 @@ UpdateEnemyPos:
         jmp EndUpdateEnemyPos
 .ResetEnemyPos:
 	jsr GetRandomEnemyPos
-.UpdateScore:
         sed
-        clc 
-        lda Score
+        clc
+        lda Timer
         adc #1
-        sta Score
-        cld 
+        sta Timer
+        cld
+
 EndUpdateEnemyPos:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Check colision for P0 and enemy
@@ -347,18 +385,24 @@ CheckP0P1Collision:
 	lda #$84
 	sta RiverColor
 
-        jmp EndCheckCollision
+        jmp CheckM0P1Collision
 .CollisionP0P1:
         jsr GameOver
 
-;CheckP0PFCollision:
- ;       lda #%10000000
-  ;      bit CXP0FB      ; collision P0 
-   ;     bne .CollisionP0PF
-    ;    jmp EndCheckCollision
-;.CollisionP0PF:
- ;       jsr GameOver
-
+CheckM0P1Collision:
+        lda #%10000000
+        bit CXM0P      ; collision M0 con P1 
+   	bne .CollisionM0P1
+    	jmp EndCheckCollision
+.CollisionM0P1:
+        sed
+        clc
+        lda Score
+        adc #1
+        sta Score
+        cld
+        lda #0
+        sta M0PosY
 EndCheckCollision:      ; fallback
         sta CXCLR           ; clear collision flag
 
@@ -431,6 +475,7 @@ GetRandomEnemyPos subroutine
         
         lda #96
         sta P1PosY              ; set Y position for enemy
+        
         rts
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -477,7 +522,7 @@ Waste12Cycle subroutine
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Digits:
-    .byte %01110111          ; ### ###
+    .byte %01110011          ; ### ###
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #

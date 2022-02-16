@@ -238,7 +238,7 @@ VisibleLineLoop:
 	txa
         sec
         sbc P0PosY
-        cmp P0_HEIGHT
+        cmp #P0_HEIGHT
         bcc .DrawP0Sprite
         lda #0
 .DrawP0Sprite:
@@ -254,7 +254,7 @@ VisibleLineLoop:
 	txa
         sec
         sbc P1PosY
-        cmp P1_HEIGHT
+        cmp #P1_HEIGHT
         bcc .DrawP1Sprite
         lda #0
 .DrawP1Sprite:
@@ -322,7 +322,7 @@ CheckP0Left:
         cmp #33			; left bound
         bmi CheckP0Right
 	dec P0PosX
-        lda P0_HEIGHT
+        lda #P0_HEIGHT
         sta P0AnimOffset
         
 CheckP0Right:
@@ -334,7 +334,7 @@ CheckP0Right:
         cmp #100		; Right Bound
         bpl CheckP0button
         inc P0PosX
-        lda P0_HEIGHT
+        lda #P0_HEIGHT
         sta P0AnimOffset
         
 CheckP0button:
@@ -411,8 +411,6 @@ EndCheckCollision:      ; fallback
 ;; End of the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         jmp NextFrame
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Subroutine for actor horizontal movement fine offset
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -523,7 +521,7 @@ Waste12Cycle subroutine
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Digits:
-    .byte %01110011          ; ### ###
+    .byte %01110111          ; ### ###
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #

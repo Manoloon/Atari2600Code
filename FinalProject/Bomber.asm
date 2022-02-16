@@ -403,6 +403,7 @@ CheckM0P1Collision:
         cld
         lda #0
         sta M0PosY
+        jsr GetRandomEnemyPos
 EndCheckCollision:      ; fallback
         sta CXCLR           ; clear collision flag
 

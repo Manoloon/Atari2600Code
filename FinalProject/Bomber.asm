@@ -29,10 +29,11 @@ Random          byte    ; random number generate
 ScoreSprite     byte
 TimerSprite     byte
 TerrainColor	byte
-RiverColor		byte
+RiverColor	byte
+ShootDelay	byte
 
-P0_HEIGHT =	9
-P1_HEIGHT =	9
+P0_HEIGHT = 	9
+P1_HEIGHT = 	9
 DIGITS_HEIGHT = 5
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -113,7 +114,7 @@ NextFrame:
 	lda #0
 	sta VSYNC
         
-	REPEAT 33               ; sacamos 4 ciclos porque seran usados por el calculo de la posicion X del player 0.	
+	REPEAT 32               ; sacamos 4 ciclos porque seran usados por el calculo de la posicion X del player 0.	
 	sta WSYNC
 	REPEND
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -132,6 +133,8 @@ NextFrame:
         jsr SetActorPosX
         
         jsr CalcDigitsOffset
+        
+        jsr JetSound
         
         sta WSYNC
         sta HMOVE
@@ -338,10 +341,18 @@ CheckP0Right:
         sta P0AnimOffset
         
 CheckP0button:
+        lda #3
+        sta ShootDelay
+	lda #0
+        sta AUDV1
 	lda #%10000000
-        bit INPT4		
+        bit INPT4
         bne NoInput
 .P0ButtonPressed:
+        dec ShootDelay
+        beq ShootMissile
+ShootMissile:
+        jsr MissileSound
         lda P0PosX
         clc
         adc #5
@@ -350,8 +361,10 @@ CheckP0button:
         lda P0PosY
         clc
         adc #5
-        sta M0PosY        
+        sta M0PosY
+        jmp NoInput
 NoInput:
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Calculate movement for enemy
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -364,6 +377,7 @@ UpdateEnemyPos:
         jmp EndUpdateEnemyPos
 .ResetEnemyPos:
 	jsr GetRandomEnemyPos
+.UpdateTimer:
         sed
         clc
         lda Timer
@@ -395,13 +409,14 @@ CheckM0P1Collision:
    	bne .CollisionM0P1
     	jmp EndCheckCollision
 .CollisionM0P1:
+	jsr ExplosionSound
         sed
         clc
         lda Score
         adc #1
         sta Score
         cld
-        lda #0
+	lda #0
         sta M0PosY
         jsr GetRandomEnemyPos
 EndCheckCollision:      ; fallback
@@ -411,6 +426,64 @@ EndCheckCollision:      ; fallback
 ;; End of the frame
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         jmp NextFrame
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine For JetSound
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+JetSound subroutine
+	lda #1
+        sta AUDV0
+        
+        lda P0PosY
+        lsr 
+        lsr
+        lsr
+        sta Temp
+        lda #29
+        sec
+        sbc Temp
+        sta AUDF0
+        
+        lda #1
+        sta AUDC0
+        
+        rts
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine For missile
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MissileSound subroutine
+	lda #3
+        sta AUDV1
+        
+        lda #30
+        sta AUDF1
+        
+        lda #7
+        sta AUDC1
+
+        rts
+        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Subroutine For Explosion
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ExplosionSound subroutine
+	lda #3
+        sta AUDV1
+        
+        lda P0PosY
+        lsr
+        lsr
+        lsr
+        sta Temp
+        lda #30
+        sec
+        sbc Temp
+        sta AUDF1
+        
+        lda #16
+        sta AUDC1
+
+        rts
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Subroutine for actor horizontal movement fine offset
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -521,7 +594,7 @@ Waste12Cycle subroutine
 ;; Lookup table for the player graphics bitmap
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 Digits:
-    .byte %01110111          ; ### ###
+    .byte %01110011          ; ### ###
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #
     .byte %01010101          ; # # # #

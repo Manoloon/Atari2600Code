@@ -1,7 +1,49 @@
 	processor 6502
         include "vcs.h"
         include "macro.h"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Assembler switches
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+OPTIMIZE = 0
+NTSC = 1
+        IF NTSC
+FRAMERATE = 60
+STARTTIME = $20
+        ELSE
+FRAMERATE = 50
+STARTTIME = $24
+        ENDIF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CONSTANT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        IF NTSC
+DEEPBLUE = $0A
+CYAN = $CA 
+RED = $14
+GOLD = $BE 
+PURPLE = $66
+        ELSE
+DEEPBLUE = $0A
+CYAN = $CA 
+RED = $14
+GOLD = $BE 
+PURPLE = $66
+        ENDIF
+WHITE = $FB 
+BLACK = $10
 
+SCREEN_WIDTH = 160
+
+;SWCHA JOYSTICK BITS:
+MOVE_RIGHT      = %0111
+MOVE_LEFT       = %1011
+MOVE_UP         = %1110
+MOVE_DOWN       = %1101
+NO_MOVE         = %1111
+
+;Values for REFPx:
+NO_REFLECT = %0000
+REFLECT = %1000
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start an uninitialized segment at $80 for var declaration.
 ;; We have memory from $80 to $FF to work with, minus a few at

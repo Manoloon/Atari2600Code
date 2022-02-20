@@ -1,6 +1,49 @@
 	processor 6502
         include "vcs.h"
         include "macro.h"
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Assembler switches
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+OPTIMIZE = 0
+NTSC = 1
+        IF NTSC
+FRAMERATE = 60
+STARTTIME = $20
+        ELSE
+FRAMERATE = 50
+STARTTIME = $24
+        ENDIF
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; CONSTANT
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+        IF NTSC
+DEEPBLUE = $A0
+BLUE = $A4 
+RED = $14
+GOLD = $BE 
+PURPLE = $66
+        ELSE
+DEEPBLUE = $A1
+CYAN = $CA 
+RED = $14
+GOLD = $BE 
+PURPLE = $66
+        ENDIF
+WHITE = $FB 
+BLACK = $00
+
+SCREEN_WIDTH = 160
+
+;SWCHA JOYSTICK BITS:
+MOVE_RIGHT      = %0111
+MOVE_LEFT       = %1011
+MOVE_UP         = %1110
+MOVE_DOWN       = %1101
+NO_MOVE         = %1111
+
+P0_HEIGHT 	= 9
+P1_HEIGHT 	= 9 
+DIGITS_HEIGHT 	= 5
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start an uninitialized segment at $80 for var declaration.
@@ -31,11 +74,6 @@ TimerSprite     byte
 FGColor	    	byte
 BGColor	    	byte
 ShootDelay	byte
-
-P0_HEIGHT = 	9
-P1_HEIGHT = 	9
-DIGITS_HEIGHT = 5
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Start our ROM code segment starting at $F000.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -48,9 +86,9 @@ reset:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Initialize variables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	lda #$a0
+	lda #BLACK
         sta BGColor
-        lda #$a3
+        lda #DEEPBLUE
         sta FGColor
         lda #180
         sta P0PosY
@@ -106,10 +144,25 @@ NextFrame:
 	sta WSYNC
 	REPEND
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Calculations and task init for Player0 X position
+;; Calculations and task init for Enemy X position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	jsr CalcDigitsOffset
-        lda #0
+      
+        ;lda P1PosX
+        ;ldy #1
+        ;jsr SetActorPosX
+	
+        ;lda M0PosX
+        ;ldy #2
+        ;jsr SetActorPosX
+        
+        jsr CalcDigitsOffset
+        
+        ;jsr JetSound
+        
+        sta WSYNC
+        sta HMOVE
+
+    	lda #0
 	sta VBLANK
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 20 lines visibles --> Using For Scoreboard
@@ -195,13 +248,13 @@ VisibleLineLoop:
         lda #%00000001
 	sta CTRLPF
 
-    	lda #$F0
+    	lda #$F1
 	sta PF0			; enable reflect for the Terrain.
 	
-    	lda #$FC 
+    	lda #$F6
 	sta PF1
 	
-        lda #0
+        lda #$01
 	sta PF2
 
 	ldx #192
@@ -247,27 +300,16 @@ VisibleLineLoop:
         
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Control for Player0
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-CheckP0Up:
-	lda #%00010000
-        bit SWCHA
-        bne CheckP0Down
-.P0UpPressed:
-        lda P0PosY
-        cmp #70			; Up Bound
-        bpl CheckP0Down
-        inc P0PosY
-        lda #0
-        sta P0AnimOffset
-        
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;      
 CheckP0Down:
 	lda #%00100000
         bit SWCHA
         bne CheckP0button
-.P0DownPressed:
+.Diverswim:
         lda P0PosY
-        cmp #0			; bottom bound
+        cmp #8			; bottom bound
         bmi CheckP0button
+        dec P0PosY
         dec P0PosY
         lda #0
         sta P0AnimOffset
@@ -280,10 +322,20 @@ CheckP0button:
 	lda #%10000000
         bit INPT4
         bne NoInput
-.P0ButtonPressed:
-
+.DiverDoubleSwim:
+	lda P0PosY
+        cmp #0			; bottom bound
+        bmi NoInput
+        dec P0PosY
+        dec P0PosY
+        dec P0PosY
+        lda #P0_HEIGHT
+        sta P0AnimOffset
 NoInput:
-
+        lda P0PosY
+        inc P0PosY
+        lda #0
+        sta P0AnimOffset
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Calculate movement for enemy
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
